@@ -1,8 +1,14 @@
 import os
 import sqlite3
+import unicodedata
 
 import pandas as pd
 import streamlit as st
+
+
+def sem_acento(texto: str) -> str:
+    normalizado = unicodedata.normalize("NFD", texto)
+    return "".join(c for c in normalizado if unicodedata.category(c) != "Mn").lower()
 
 DB_PATH = os.path.join("database", "prospeccao.db")
 
@@ -54,14 +60,20 @@ filtrado = df.copy()
 if ramo_sel:
     filtrado = filtrado[filtrado["ramo"].isin(ramo_sel)]
 if cidade_sel:
-    filtrado = filtrado[filtrado["cidade"].isin(cidade_sel)]
+    cidades_norm = [sem_acento(c) for c in cidade_sel]
+    filtrado = filtrado[filtrado["cidade"].fillna("").apply(sem_acento).isin(cidades_norm)]
 if busca:
-    mask = filtrado["nome"].str.contains(busca, case=False, na=False) | filtrado[
-        "cnpj"
-    ].str.contains(busca, case=False, na=False)
+    termo = sem_acento(busca)
+    mask = (
+        filtrado["nome"].fillna("").apply(sem_acento).str.contains(termo, regex=False)
+        | filtrado["cnpj"].fillna("").apply(sem_acento).str.contains(termo, regex=False)
+    )
     filtrado = filtrado[mask]
 if busca_bairro:
-    filtrado = filtrado[filtrado["bairro"].str.contains(busca_bairro, case=False, na=False)]
+    termo_bairro = sem_acento(busca_bairro)
+    filtrado = filtrado[
+        filtrado["bairro"].fillna("").apply(sem_acento).str.contains(termo_bairro, regex=False)
+    ]
 if busca_cep:
     filtrado = filtrado[filtrado["cep"].str.startswith(busca_cep, na=False)]
 
