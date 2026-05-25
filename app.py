@@ -65,11 +65,14 @@ if cidade_sel:
     cidades_norm = [sem_acento(c) for c in cidade_sel]
     filtrado = filtrado[filtrado["cidade"].fillna("").apply(sem_acento).isin(cidades_norm)]
 if busca:
-    termo = sem_acento(busca)
+    palavras = [sem_acento(p) for p in busca.split() if p.strip()]
     nomes_norm = filtrado["nome"].fillna("").apply(sem_acento).tolist()
-    scores = process.cdist([termo], nomes_norm, scorer=fuzz.partial_ratio)[0]
-    mask_nome = scores >= 70
-    mask_cnpj = filtrado["cnpj"].fillna("").apply(sem_acento).str.contains(termo, regex=False).values
+    # matriz (palavras × clientes): cada linha é uma palavra, cada coluna é um nome
+    score_matrix = process.cdist(palavras, nomes_norm, scorer=fuzz.partial_ratio)
+    # cliente só passa se TODAS as palavras tiverem score >= 85
+    mask_nome = (score_matrix >= 85).all(axis=0)
+    termo_cnpj = sem_acento(busca)
+    mask_cnpj = filtrado["cnpj"].fillna("").apply(sem_acento).str.contains(termo_cnpj, regex=False).values
     filtrado = filtrado[mask_nome | mask_cnpj]
 if busca_bairro:
     termo_bairro = sem_acento(busca_bairro)
