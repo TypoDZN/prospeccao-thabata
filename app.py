@@ -2,8 +2,10 @@ import os
 import sqlite3
 import unicodedata
 
+import numpy as np
 import pandas as pd
 import streamlit as st
+from rapidfuzz import fuzz, process
 
 
 def sem_acento(texto: str) -> str:
@@ -64,11 +66,11 @@ if cidade_sel:
     filtrado = filtrado[filtrado["cidade"].fillna("").apply(sem_acento).isin(cidades_norm)]
 if busca:
     termo = sem_acento(busca)
-    mask = (
-        filtrado["nome"].fillna("").apply(sem_acento).str.contains(termo, regex=False)
-        | filtrado["cnpj"].fillna("").apply(sem_acento).str.contains(termo, regex=False)
-    )
-    filtrado = filtrado[mask]
+    nomes_norm = filtrado["nome"].fillna("").apply(sem_acento).tolist()
+    scores = process.cdist([termo], nomes_norm, scorer=fuzz.partial_ratio)[0]
+    mask_nome = scores >= 70
+    mask_cnpj = filtrado["cnpj"].fillna("").apply(sem_acento).str.contains(termo, regex=False).values
+    filtrado = filtrado[mask_nome | mask_cnpj]
 if busca_bairro:
     termo_bairro = sem_acento(busca_bairro)
     filtrado = filtrado[
