@@ -65,7 +65,8 @@ if cidade_sel:
     cidades_norm = [sem_acento(c) for c in cidade_sel]
     filtrado = filtrado[filtrado["cidade"].fillna("").apply(sem_acento).isin(cidades_norm)]
 if busca:
-    palavras = [sem_acento(p) for p in busca.split() if len(p.strip()) >= 3]
+    STOPWORDS = {"de", "da", "do", "as", "os", "em", "ou", "e", "a", "o"}
+    palavras = [sem_acento(p) for p in busca.split() if sem_acento(p) not in STOPWORDS]
     nomes_norm = filtrado["nome"].fillna("").apply(sem_acento).tolist()
     # matriz (palavras × clientes): cada linha é uma palavra, cada coluna é um nome
     score_matrix = process.cdist(palavras, nomes_norm, scorer=fuzz.partial_ratio)
